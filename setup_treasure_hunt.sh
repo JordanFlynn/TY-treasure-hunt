@@ -134,6 +134,3 @@ EOF
 
 echo "✅  Treasure hunt created in ./$BASE/"
 echo "    The winning phrase is: B4SH"
-echo ""
-echo "🗺  Tree preview:"
-find "$BASE" -name "treasure.txt" | sort
