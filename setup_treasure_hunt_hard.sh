@@ -155,4 +155,3 @@ Good luck. You will need it.
 EOF
 
 echo "✅  Hard treasure hunt created in ./$BASE/"
-echo "    Passphrases ($TREASURE_FILE + $TREASURE_FILE_PART2): $TREASURE_PART1 + $TREASURE_PART2"
