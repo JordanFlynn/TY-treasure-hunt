@@ -7,6 +7,12 @@
 # ============================================================
 
 BASE="treasure_hunt_hard"
+# Real winning phrase is split across these two filenames (same directory).
+TREASURE_FILE="treasure.txt"
+TREASURE_FILE_PART2="treasure_part2.txt"
+TREASURE_PART1="R3D"
+TREASURE_PART2="H4T"
+
 rm -rf "$BASE"
 mkdir -p "$BASE"
 
@@ -76,10 +82,11 @@ build_dir() {
   fi
 
   if [[ $place_real -eq 1 ]]; then
-    echo "You found it! The password is: SH3LL" > "$path/treasure.txt"
+    echo "$TREASURE_PART1" > "$path/$TREASURE_FILE"
+    echo "$TREASURE_PART2" > "$path/$TREASURE_FILE_PART2"
     TREASURE_PLACED=1
   else
-    fake "$path/treasure.txt"
+    fake "$path/$TREASURE_FILE"
   fi
 
   if [[ $depth -ge $max_depth ]]; then
@@ -117,16 +124,21 @@ if [[ $TREASURE_PLACED -eq 0 ]]; then
       max_slashes=$n
       deepest=$f
     fi
-  done < <(find "$BASE" -name "treasure.txt")
+  done < <(find "$BASE" -name "$TREASURE_FILE")
   if [[ -n "$deepest" ]]; then
-    echo "You found it! The password is: SH3LL" > "$deepest"
+    win_dir=$(dirname "$deepest")
+    echo "$TREASURE_PART1" > "$win_dir/$TREASURE_FILE"
+    echo "$TREASURE_PART2" > "$win_dir/$TREASURE_FILE_PART2"
   fi
 fi
 
 cat > "$BASE/README.txt" << 'EOF'
 🏴‍☠️  BASH TREASURE HUNT — HARD MODE  🏴‍☠️
 
-Your mission: find the ONE treasure.txt that contains the secret phrase.
+Your mission: find the ONE folder where the real treasure lives. The winning
+phrase is split across two files in that folder: treasure.txt and
+treasure_part2.txt. Read both and put the pieces together. Everywhere else,
+treasure.txt is a decoy (and there is no treasure_part2.txt).
 There are many decoys. The tree is deep and wide.
 
 COMMANDS YOU'LL NEED:
@@ -143,4 +155,4 @@ Good luck. You will need it.
 EOF
 
 echo "✅  Hard treasure hunt created in ./$BASE/"
-echo "    The winning phrase is: SH3LL"
+echo "    Passphrases ($TREASURE_FILE + $TREASURE_FILE_PART2): $TREASURE_PART1 + $TREASURE_PART2"
