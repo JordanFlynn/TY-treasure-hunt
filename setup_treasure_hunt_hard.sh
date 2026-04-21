@@ -7,8 +7,9 @@
 # ============================================================
 
 BASE="treasure_hunt_hard"
-# Real winning phrase is split across these two filenames (same directory).
-TREASURE_FILE="treasure.txt"
+# Real passphrase split: treasure_part1.txt and treasure_part2.txt in two different directories.
+TREASURE_FILE_DECOY="treasure.txt"
+TREASURE_FILE_PART1="treasure_part1.txt"
 TREASURE_FILE_PART2="treasure_part2.txt"
 TREASURE_PART1="R3D"
 TREASURE_PART2="H4T"
@@ -64,7 +65,9 @@ pick_name() {
 # RECURSIVE BUILDER
 # build_dir <path> <current_depth> <max_depth>
 # ============================================================
-TREASURE_PLACED=0
+PART1_PLACED=0
+PART2_PLACED=0
+TREASURE_PART1_PATH=""
 
 build_dir() {
   local path="$1"
@@ -72,8 +75,8 @@ build_dir() {
   local max_depth="$3"
 
   local place_real=0
-  # Harder: real treasure only from depth >= 3, lower odds until max depth
-  if [[ $TREASURE_PLACED -eq 0 && $depth -ge 3 ]]; then
+  # Real parts only from depth >= 3; need two different dirs for part1 and part2
+  if [[ ($PART1_PLACED -eq 0 || $PART2_PLACED -eq 0) && $depth -ge 3 ]]; then
     if [[ $depth -eq $max_depth ]]; then
       place_real=1
     elif [[ $((RANDOM % 8)) -eq 0 ]]; then
@@ -82,12 +85,17 @@ build_dir() {
   fi
 
   if [[ $place_real -eq 1 ]]; then
-    echo "$TREASURE_PART1" > "$path/$TREASURE_FILE"
-    echo "$TREASURE_PART2" > "$path/$TREASURE_FILE_PART2"
-    TREASURE_PLACED=1
-  else
-    fake "$path/$TREASURE_FILE"
+    if [[ $PART1_PLACED -eq 0 ]]; then
+      echo "$TREASURE_PART1" > "$path/$TREASURE_FILE_PART1"
+      PART1_PLACED=1
+      TREASURE_PART1_PATH="$path"
+    elif [[ $PART2_PLACED -eq 0 && "$path" != "$TREASURE_PART1_PATH" ]]; then
+      echo "$TREASURE_PART2" > "$path/$TREASURE_FILE_PART2"
+      PART2_PLACED=1
+    fi
   fi
+
+  fake "$path/$TREASURE_FILE_DECOY"
 
   if [[ $depth -ge $max_depth ]]; then
     return
@@ -114,7 +122,21 @@ for dir in "${ROOT_DIRS[@]}"; do
   build_dir "$BASE/$dir" 1 6
 done
 
-if [[ $TREASURE_PLACED -eq 0 ]]; then
+deepest_decoy_not_part1() {
+  local deepest="" max_slashes=-1
+  while IFS= read -r f; do
+    [[ -n "$TREASURE_PART1_PATH" && "$(dirname "$f")" == "$TREASURE_PART1_PATH" ]] && continue
+    local slashes="${f//[^\/]/}"
+    local n=${#slashes}
+    if (( n > max_slashes )); then
+      max_slashes=$n
+      deepest=$f
+    fi
+  done < <(find "$BASE" -name "$TREASURE_FILE_DECOY" -type f)
+  echo "$deepest"
+}
+
+if [[ $PART1_PLACED -eq 0 ]]; then
   deepest=""
   max_slashes=-1
   while IFS= read -r f; do
@@ -124,22 +146,31 @@ if [[ $TREASURE_PLACED -eq 0 ]]; then
       max_slashes=$n
       deepest=$f
     fi
-  done < <(find "$BASE" -name "$TREASURE_FILE")
+  done < <(find "$BASE" -name "$TREASURE_FILE_DECOY" -type f)
   if [[ -n "$deepest" ]]; then
     win_dir=$(dirname "$deepest")
-    echo "$TREASURE_PART1" > "$win_dir/$TREASURE_FILE"
+    echo "$TREASURE_PART1" > "$win_dir/$TREASURE_FILE_PART1"
+    PART1_PLACED=1
+    TREASURE_PART1_PATH="$win_dir"
+  fi
+fi
+
+if [[ $PART2_PLACED -eq 0 ]]; then
+  deepest=$(deepest_decoy_not_part1)
+  if [[ -n "$deepest" ]]; then
+    win_dir=$(dirname "$deepest")
     echo "$TREASURE_PART2" > "$win_dir/$TREASURE_FILE_PART2"
+    PART2_PLACED=1
   fi
 fi
 
 cat > "$BASE/README.txt" << 'EOF'
 🏴‍☠️  BASH TREASURE HUNT — HARD MODE  🏴‍☠️
 
-Your mission: find the ONE folder where the real treasure lives. The winning
-phrase is split across two files in that folder: treasure.txt and
-treasure_part2.txt. Read both and put the pieces together. Everywhere else,
-treasure.txt is a decoy (and there is no treasure_part2.txt).
-There are many decoys. The tree is deep and wide.
+Your mission: find the two folders that hold the real passphrase. One folder
+contains treasure_part1.txt (first half); a different folder contains
+treasure_part2.txt (second half). Every directory also has treasure.txt as a
+decoy. There are many decoys. The tree is deep and wide.
 
 COMMANDS YOU'LL NEED:
   ls          — list what's in the current folder
